@@ -319,3 +319,15 @@ docker compose up --build
 
 El servicio de PostgreSQL está incluido en Compose. `POSTGRES_URL` puede configurarse para cambiar la conexión. 
 
+### CRUD de sedes y zonas
+
+El siguiente recurso es `parkings`, que registra una sede y sus zonas. Las zonas se almacenan embebidas en MongoDB y en la tabla relacionada `parking_zones` en PostgreSQL; la API entrega ambas con la misma estructura.
+
+- `POST /api/v1/parkings`: crea una sede con una o más zonas.
+- `GET /api/v1/parkings`: lista las sedes.
+- `GET /api/v1/parkings/{parking_id}`: consulta una sede.
+- `PUT /api/v1/parkings/{parking_id}`: actualiza uno o más campos; al enviar `zones`, reemplaza la lista completa.
+- `DELETE /api/v1/parkings/{parking_id}`: elimina una sede.
+
+Se validan el nombre, dirección, ciudad y zonas; cada sede debe tener entre 1 y 50 zonas y no se permiten nombres de zona repetidos sin distinguir mayúsculas. Los campos de creación son obligatorios y las actualizaciones parciales rechazan cuerpos vacíos, campos desconocidos y valores nulos.
+
