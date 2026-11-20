@@ -7,8 +7,10 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
 
-    MONGODB_URL: str
-    MONGODB_DATABASE: str
+    MONGODB_URL: str = "mongodb://localhost:27017"
+    MONGODB_DATABASE: str = "smartpark"
+    DATABASE_BACKEND: str = "mongodb"
+    POSTGRES_URL: str = "postgresql://smartpark:smartpark@localhost:5432/smartpark"
 
     model_config = SettingsConfigDict(
         env_file=".env",

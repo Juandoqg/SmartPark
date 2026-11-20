@@ -1,5 +1,15 @@
 from bson import ObjectId
+from uuid import UUID
 from app.database.mongodb import MongoDB
+
+
+def _mongo_id(value):
+    if ObjectId.is_valid(value):
+        return ObjectId(value)
+    try:
+        return str(UUID(value))
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError("Identificador inválido")
 
 
 class UserRepository:
@@ -21,7 +31,7 @@ class UserRepository:
 
     @classmethod
     async def find_by_id(cls, user_id):
-        return cls._serialize(await cls.collection().find_one({"_id": ObjectId(user_id)}))
+        return cls._serialize(await cls.collection().find_one({"_id": _mongo_id(user_id)}))
 
     @classmethod
     async def find_by_email(cls, email):
@@ -41,5 +51,5 @@ class UserRepository:
 
     @classmethod
     async def delete(cls, user_id):
-        result = await cls.collection().delete_one({"_id": ObjectId(user_id)})
+        result = await cls.collection().delete_one({"_id": _mongo_id(user_id)})
         return result.deleted_count == 1

@@ -1,43 +1,63 @@
-from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 from app.repositories.user_repository import UserRepository
 from app.repositories.vehicle_repository import VehicleRepository
-from app.schemas.vehicle_schema import VehicleCreate, VehicleUpdate
+from app.repositories.ports import RepositoryConflictError
+from app.schemas.vehicle_schema import VehicleCreate, VehicleFields, VehicleUpdate
 from app.services.vehicleservice.vehicle_service import VehicleService
 
 class VehicleAlreadyExistsError(Exception): pass
 class UserNotFoundError(Exception): pass
 class VehicleNotFoundError(Exception): pass
+class VehicleValidationError(Exception): pass
 
 class VehicleServiceImpl(VehicleService):
+    def __init__(self, user_repository=None, vehicle_repository=None):
+        self.user_repository = user_repository or UserRepository()
+        self.vehicle_repository = vehicle_repository or VehicleRepository()
+
     async def _ensure_user(self, user_id):
-        if not ObjectId.is_valid(user_id): raise UserNotFoundError("Identificador de usuario inválido")
-        if await UserRepository.find_by_id(user_id) is None: raise UserNotFoundError("El usuario asociado no existe")
+        try:
+            user = await self.user_repository.find_by_id(user_id)
+        except (ValueError, TypeError):
+            user = None
+        if user is None: raise UserNotFoundError("El usuario asociado no existe")
 
     async def create(self, vehicle: VehicleCreate):
         data = vehicle.model_dump()
         await self._ensure_user(data["user_id"])
-        try: return await VehicleRepository.create(data)
-        except DuplicateKeyError as exc: raise VehicleAlreadyExistsError("Ya existe un vehículo con esta placa") from exc
+        try: return await self.vehicle_repository.create(data)
+        except (DuplicateKeyError, RepositoryConflictError) as exc: raise VehicleAlreadyExistsError("Ya existe un vehículo con esta placa") from exc
 
-    async def find_all(self): return await VehicleRepository.find_all()
+    async def find_all(self): return await self.vehicle_repository.find_all()
     async def find_by_user(self, user_id):
         await self._ensure_user(user_id)
-        return await VehicleRepository.find_by_user(user_id)
+        return await self.vehicle_repository.find_by_user(user_id)
 
     async def find_by_id(self, vehicle_id):
-        if not ObjectId.is_valid(vehicle_id): raise VehicleNotFoundError("Identificador de vehículo inválido")
-        vehicle = await VehicleRepository.find_by_id(vehicle_id)
+        try:
+            vehicle = await self.vehicle_repository.find_by_id(vehicle_id)
+        except (ValueError, TypeError):
+            vehicle = None
         if vehicle is None: raise VehicleNotFoundError("Vehículo no encontrado")
         return vehicle
 
     async def update(self, vehicle_id, data: VehicleUpdate):
-        await self.find_by_id(vehicle_id)
+        current = await self.find_by_id(vehicle_id)
         changes = data.model_dump(exclude_unset=True)
         if "user_id" in changes: await self._ensure_user(changes["user_id"])
-        try: return await VehicleRepository.update(vehicle_id, changes)
-        except DuplicateKeyError as exc: raise VehicleAlreadyExistsError("Ya existe un vehículo con esta placa") from exc
+        final_values = {
+            "plate": current.get("plate"),
+            "vehicle_type": current["vehicle_type"],
+            "user_id": current["user_id"],
+            **changes,
+        }
+        try:
+            VehicleFields.model_validate(final_values)
+        except ValueError as exc:
+            raise VehicleValidationError(str(exc)) from exc
+        try: return await self.vehicle_repository.update(vehicle_id, changes)
+        except (DuplicateKeyError, RepositoryConflictError) as exc: raise VehicleAlreadyExistsError("Ya existe un vehículo con esta placa") from exc
 
     async def delete(self, vehicle_id):
         await self.find_by_id(vehicle_id)
-        return await VehicleRepository.delete(vehicle_id)
+        return await self.vehicle_repository.delete(vehicle_id)

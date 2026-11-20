@@ -1,16 +1,20 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.config.settings import settings
-from app.database.mongodb import MongoDB
+from app.database.backend import create_backend
 from app.controllers.user_controller import router as user_router
 from app.controllers.vehicle_controller import router as vehicle_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await MongoDB.connect()
-    yield
-    await MongoDB.close()
+    backend = create_backend()
+    await backend.connect()
+    app.state.backend = backend
+    try:
+        yield
+    finally:
+        await backend.close()
 
 
 app = FastAPI(
