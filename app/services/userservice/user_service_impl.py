@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from pymongo.errors import DuplicateKeyError
 
+from app.services.userservice.user_service import UserService
 from app.repositories.user_repository import UserRepository
 from app.schemas.user_schema import UserCreate
 
@@ -10,10 +11,9 @@ class UserAlreadyExistsError(Exception):
     pass
 
 
-class UserService:
+class UserServiceImpl(UserService):
 
-    @staticmethod
-    async def create(user: UserCreate):
+    async def create(self, user: UserCreate):
 
         user_data = user.model_dump()
 
@@ -28,7 +28,6 @@ class UserService:
                 "A user with this email already exists"
             )
 
-    @staticmethod
-    async def find_all():
+    async def find_all(self):
 
         return await UserRepository.find_all()
