@@ -17,7 +17,7 @@ class MongoDB:
     @classmethod
     async def create_collections(cls):
         existing = await cls.database.list_collection_names()
-        for name in ("users", "vehicles"):
+        for name in ("users", "vehicles", "parkings"):
             if name not in existing:
                 await cls.database.create_collection(name)
         await cls.database["users"].create_index("email", unique=True, name="unique_user_email")
@@ -33,6 +33,7 @@ class MongoDB:
             partialFilterExpression=expected_partial_filter,
         )
         await cls.database["vehicles"].create_index("user_id", name="vehicles_by_user")
+        await cls.database["parkings"].create_index([("city", 1), ("name", 1)], name="parkings_by_city_name")
 
     @classmethod
     async def close(cls):

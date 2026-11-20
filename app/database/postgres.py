@@ -49,6 +49,25 @@ class PostgresDB:
             # Keep existing development databases compatible with bicycle records without plates.
             await connection.execute("ALTER TABLE vehicles ALTER COLUMN plate DROP NOT NULL")
             await connection.execute("CREATE INDEX IF NOT EXISTS vehicles_by_user ON vehicles(user_id)")
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS parkings (
+                    id UUID PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    address VARCHAR(200) NOT NULL,
+                    city VARCHAR(80) NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS parking_zones (
+                    parking_id UUID NOT NULL REFERENCES parkings(id) ON DELETE CASCADE,
+                    name VARCHAR(50) NOT NULL,
+                    description VARCHAR(150),
+                    PRIMARY KEY (parking_id, name)
+                )
+            """)
+            await connection.execute("CREATE INDEX IF NOT EXISTS parkings_by_city_name ON parkings(city, name)")
 
     @classmethod
     def get_pool(cls) -> asyncpg.Pool:

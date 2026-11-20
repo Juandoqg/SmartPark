@@ -4,6 +4,7 @@ from app.config.settings import settings
 from app.database.backend import create_backend
 from app.controllers.user_controller import router as user_router
 from app.controllers.vehicle_controller import router as vehicle_router
+from app.controllers.parking_controller import router as parking_router
 
 
 @asynccontextmanager
@@ -25,6 +26,7 @@ app = FastAPI(
 )
 app.include_router(user_router, prefix=settings.API_V1_PREFIX)
 app.include_router(vehicle_router, prefix=settings.API_V1_PREFIX)
+app.include_router(parking_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["Health"])
