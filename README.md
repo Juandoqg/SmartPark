@@ -298,3 +298,24 @@ Proyecto académico desarrollado por:
 ---
 
 **SmartPark API** — Sistema inteligente de gestión de parqueaderos.
+
+## Comparación de MongoDB y PostgreSQL
+
+La persistencia de usuarios y vehículos se puede elegir al iniciar con `DATABASE_BACKEND`. Los servicios usan contratos de repositorio compartidos; cada base implementa su propio adaptador.
+
+Con Docker Compose, MongoDB sigue siendo la opción inicial. Para probar PostgreSQL, inicia con la variable de entorno:
+
+```powershell
+$env:DATABASE_BACKEND = "postgresql"
+docker compose up --build
+```
+
+Para volver a MongoDB:
+
+```powershell
+$env:DATABASE_BACKEND = "mongodb"
+docker compose up --build
+```
+
+El servicio de PostgreSQL está incluido en Compose. `POSTGRES_URL` puede configurarse para cambiar la conexión. 
+

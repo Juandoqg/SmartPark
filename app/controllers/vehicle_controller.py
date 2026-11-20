@@ -1,15 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import re
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.schemas.vehicle_schema import VehicleCreate, VehicleResponse, VehicleUpdate
 from app.services.vehicleservice.vehicle_service import VehicleService
 from app.services.vehicleservice.vehicle_service_impl import (
-    UserNotFoundError, VehicleAlreadyExistsError, VehicleNotFoundError, VehicleServiceImpl,
+    UserNotFoundError, VehicleAlreadyExistsError, VehicleNotFoundError,
+    VehicleServiceImpl, VehicleValidationError,
 )
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
-def get_vehicle_service() -> VehicleService: return VehicleServiceImpl()
+def get_vehicle_service(request: Request) -> VehicleService:
+    backend = request.app.state.backend
+    return VehicleServiceImpl(backend.user_repository, backend.vehicle_repository)
 def handle_error(exc):
     if isinstance(exc, VehicleAlreadyExistsError): raise HTTPException(409, detail=str(exc)) from exc
     if isinstance(exc, (UserNotFoundError, VehicleNotFoundError)): raise HTTPException(404, detail=str(exc)) from exc
+    if isinstance(exc, VehicleValidationError): raise HTTPException(422, detail=str(exc)) from exc
 
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
 async def create_vehicle(vehicle: VehicleCreate, service: VehicleService = Depends(get_vehicle_service)):
@@ -22,6 +27,8 @@ async def find_all_vehicles(service: VehicleService = Depends(get_vehicle_servic
 
 @router.get("/user/{user_id}", response_model=list[VehicleResponse])
 async def find_vehicles_by_user(user_id: str, service: VehicleService = Depends(get_vehicle_service)):
+    if not re.fullmatch(r"(?:[0-9a-fA-F]{24}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})", user_id):
+        raise HTTPException(status_code=422, detail="user_id debe ser un ObjectId o UUID válido")
     try: return await service.find_by_user(user_id)
     except UserNotFoundError as exc: handle_error(exc)
 
@@ -33,7 +40,7 @@ async def find_vehicle_by_id(vehicle_id: str, service: VehicleService = Depends(
 @router.put("/{vehicle_id}", response_model=VehicleResponse)
 async def update_vehicle(vehicle_id: str, data: VehicleUpdate, service: VehicleService = Depends(get_vehicle_service)):
     try: return await service.update(vehicle_id, data)
-    except (VehicleAlreadyExistsError, UserNotFoundError, VehicleNotFoundError) as exc: handle_error(exc)
+    except (VehicleAlreadyExistsError, UserNotFoundError, VehicleNotFoundError, VehicleValidationError) as exc: handle_error(exc)
 
 @router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_vehicle(vehicle_id: str, service: VehicleService = Depends(get_vehicle_service)):

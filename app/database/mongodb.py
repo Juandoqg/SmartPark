@@ -21,7 +21,17 @@ class MongoDB:
             if name not in existing:
                 await cls.database.create_collection(name)
         await cls.database["users"].create_index("email", unique=True, name="unique_user_email")
-        await cls.database["vehicles"].create_index("plate", unique=True, name="unique_vehicle_plate")
+        vehicle_indexes = await cls.database["vehicles"].index_information()
+        existing_plate_index = vehicle_indexes.get("unique_vehicle_plate")
+        expected_partial_filter = {"plate": {"$type": "string"}}
+        if existing_plate_index and existing_plate_index.get("partialFilterExpression") != expected_partial_filter:
+            await cls.database["vehicles"].drop_index("unique_vehicle_plate")
+        await cls.database["vehicles"].create_index(
+            "plate",
+            unique=True,
+            name="unique_vehicle_plate",
+            partialFilterExpression=expected_partial_filter,
+        )
         await cls.database["vehicles"].create_index("user_id", name="vehicles_by_user")
 
     @classmethod

@@ -19,9 +19,12 @@ services:
       API_V1_PREFIX: /api/v1
       MONGODB_URL: mongodb://mongodb:27017
       MONGODB_DATABASE: smartpark
-
+      DATABASE_BACKEND: ${DATABASE_BACKEND:-mongodb}
+      POSTGRES_URL: ${POSTGRES_URL:-postgresql://postgres:postgres@postgres:5432/smartpark}
     depends_on:
       mongodb:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   mongodb:
@@ -43,5 +46,24 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres:
+    image: postgres:16
+    container_name: smartpark-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: smartpark
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - smartpark_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smartpark"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   smartpark_mongo_data:
+  smartpark_postgres_data:
