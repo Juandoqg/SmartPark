@@ -1,13 +1,17 @@
 from abc import ABC, abstractmethod
-from app.schemas.user_schema import UserCreate
+from app.schemas.user_schema import UserCreate, UserUpdate
 
 
 class UserService(ABC):
-
     @abstractmethod
-    async def create(self, user: UserCreate):
-        pass
-
+    async def create(self, user: UserCreate): ...
     @abstractmethod
-    async def find_all(self):
-        pass
+    async def find_all(self): ...
+    @abstractmethod
+    async def find_by_email(self, email: str): ...
+    @abstractmethod
+    async def find_by_id(self, user_id: str): ...
+    @abstractmethod
+    async def update(self, user_id: str, data: UserUpdate): ...
+    @abstractmethod
+    async def delete(self, user_id: str): ...
