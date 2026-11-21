@@ -46,7 +46,7 @@ class UserRepository:
 
     @classmethod
     async def update(cls, user_id, data):
-        await cls.collection().update_one({"_id": ObjectId(user_id)}, {"$set": data})
+        await cls.collection().update_one({"_id": _mongo_id(user_id)}, {"$set": data})
         return await cls.find_by_id(user_id)
 
     @classmethod

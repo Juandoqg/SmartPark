@@ -35,9 +35,17 @@ class PostgresDB:
                     full_name VARCHAR(100) NOT NULL,
                     email VARCHAR(320) NOT NULL UNIQUE,
                     phone VARCHAR(20),
+                    password_hash TEXT,
+                    role VARCHAR(20) NOT NULL DEFAULT 'user',
                     created_at TIMESTAMPTZ NOT NULL
                 )
             """)
+            await connection.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT")
+            await connection.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'")
+            if settings.ADMIN_EMAIL.strip():
+                await connection.execute(
+                    "UPDATE users SET role='admin' WHERE lower(email)=lower($1)", settings.ADMIN_EMAIL.strip()
+                )
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS vehicles (
                     id UUID PRIMARY KEY,

@@ -1,6 +1,7 @@
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from app.auth import get_current_user, require_admin
 
 from app.schemas.parking_space_schema import (
     ParkingSpaceCreate,
@@ -47,6 +48,7 @@ async def create_space(
     parking_id: str,
     data: ParkingSpaceCreate,
     service: ParkingSpaceService = Depends(get_service),
+    _admin=Depends(require_admin),
 ):
     try:
         return await service.create(parking_id, data)
@@ -62,6 +64,7 @@ async def list_spaces(
     ),
     vehicle_type: Literal["carro", "moto", "bicicleta", "car", "motorcycle", "bicycle"] | None = None,
     service: ParkingSpaceService = Depends(get_service),
+    _user=Depends(get_current_user),
 ):
     try:
         normalized_type = normalize_vehicle_type(vehicle_type) if vehicle_type else None
@@ -75,6 +78,7 @@ async def get_availability(
     parking_id: str,
     vehicle_type: Literal["carro", "moto", "bicicleta", "car", "motorcycle", "bicycle"] | None = None,
     service: ParkingSpaceService = Depends(get_service),
+    _user=Depends(get_current_user),
 ):
     try:
         normalized_type = normalize_vehicle_type(vehicle_type) if vehicle_type else None
@@ -84,7 +88,7 @@ async def get_availability(
 
 
 @router.get("/parking-spaces/{space_id}", response_model=ParkingSpaceResponse)
-async def get_space(space_id: str, service: ParkingSpaceService = Depends(get_service)):
+async def get_space(space_id: str, service: ParkingSpaceService = Depends(get_service), _user=Depends(get_current_user)):
     try:
         return await service.find_by_id(space_id)
     except ParkingSpaceNotFoundError as exc:
@@ -96,6 +100,7 @@ async def update_space(
     space_id: str,
     data: ParkingSpaceUpdate,
     service: ParkingSpaceService = Depends(get_service),
+    _admin=Depends(require_admin),
 ):
     try:
         return await service.update(space_id, data)
@@ -104,7 +109,7 @@ async def update_space(
 
 
 @router.delete("/parking-spaces/{space_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_space(space_id: str, service: ParkingSpaceService = Depends(get_service)):
+async def delete_space(space_id: str, service: ParkingSpaceService = Depends(get_service), _admin=Depends(require_admin)):
     try:
         await service.delete(space_id)
     except ParkingSpaceNotFoundError as exc:

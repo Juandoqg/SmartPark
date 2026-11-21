@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from app.auth import get_current_user, require_admin
 
 from app.schemas.parking_schema import ParkingCreate, ParkingResponse, ParkingUpdate
 from app.services.parkingservice.parking_service import ParkingService
@@ -16,12 +17,13 @@ def get_parking_service(request: Request) -> ParkingService:
 async def create_parking(
     parking: ParkingCreate,
     service: ParkingService = Depends(get_parking_service),
+    _admin=Depends(require_admin),
 ):
     return await service.create(parking)
 
 
 @router.get("", response_model=list[ParkingResponse])
-async def find_all_parkings(service: ParkingService = Depends(get_parking_service)):
+async def find_all_parkings(service: ParkingService = Depends(get_parking_service), _user=Depends(get_current_user)):
     return await service.find_all()
 
 
@@ -29,6 +31,7 @@ async def find_all_parkings(service: ParkingService = Depends(get_parking_servic
 async def find_parking_by_id(
     parking_id: str,
     service: ParkingService = Depends(get_parking_service),
+    _user=Depends(get_current_user),
 ):
     try:
         return await service.find_by_id(parking_id)
@@ -41,6 +44,7 @@ async def update_parking(
     parking_id: str,
     data: ParkingUpdate,
     service: ParkingService = Depends(get_parking_service),
+    _admin=Depends(require_admin),
 ):
     try:
         return await service.update(parking_id, data)
@@ -52,6 +56,7 @@ async def update_parking(
 async def delete_parking(
     parking_id: str,
     service: ParkingService = Depends(get_parking_service),
+    _admin=Depends(require_admin),
 ):
     try:
         await service.delete(parking_id)

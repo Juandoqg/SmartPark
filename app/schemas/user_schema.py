@@ -1,14 +1,16 @@
 from datetime import datetime
 import re
 import unicodedata
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from typing import Literal
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator, model_validator
 
 
 class UserFields(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     full_name: str = Field(min_length=3, max_length=100)
     email: EmailStr
-    phone: str | None = Field(default=None, min_length=7, max_length=20)
+    phone: str = Field(min_length=7, max_length=20)
+    password: SecretStr = Field(min_length=8, max_length=128, repr=False)
 
     @field_validator("full_name")
     @classmethod
@@ -27,9 +29,7 @@ class UserFields(BaseModel):
 
     @field_validator("phone")
     @classmethod
-    def validate_phone(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
+    def validate_phone(cls, value: str) -> str:
         value = value.strip()
         if not re.fullmatch(r"\+?[0-9][0-9 ()-]{5,18}[0-9]", value):
             raise ValueError("El teléfono solo puede contener dígitos, espacios, +, paréntesis y guiones")
@@ -47,6 +47,8 @@ class UserUpdate(BaseModel):
     full_name: str | None = Field(default=None, min_length=3, max_length=100)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, min_length=7, max_length=20)
+    password: SecretStr | None = Field(default=None, min_length=8, max_length=128, repr=False)
+    role: Literal["user", "manager", "admin"] | None = None
 
     @model_validator(mode="after")
     def validate_nonempty(self):
@@ -56,6 +58,9 @@ class UserUpdate(BaseModel):
             raise ValueError("full_name no puede ser null")
         if "email" in self.model_fields_set and self.email is None:
             raise ValueError("email no puede ser null")
+        for field in ("phone", "password", "role"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} no puede ser null")
         return self
 
     @field_validator("full_name")
@@ -88,5 +93,6 @@ class UserResponse(BaseModel):
     id: str
     full_name: str
     email: EmailStr
-    phone: str | None = None
+    phone: str | None = None  # Nullable only for legacy records created before phone became required.
+    role: Literal["user", "manager", "admin"] = "user"
     created_at: datetime
