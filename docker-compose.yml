@@ -21,10 +21,15 @@ services:
       MONGODB_DATABASE: smartpark
       DATABASE_BACKEND: ${DATABASE_BACKEND:-mongodb}
       POSTGRES_URL: ${POSTGRES_URL:-postgresql://postgres:postgres@postgres:5432/smartpark}
+      REDIS_ENABLED: ${REDIS_ENABLED:-true}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_AVAILABILITY_TTL_SECONDS: ${REDIS_AVAILABILITY_TTL_SECONDS:-60}
     depends_on:
       mongodb:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   mongodb:
@@ -60,6 +65,18 @@ services:
       - smartpark_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d smartpark"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: smartpark-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

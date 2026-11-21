@@ -7,7 +7,7 @@ class PostgresParkingRepository:
     @staticmethod
     async def _get_zones(connection, parking_id):
         rows = await connection.fetch(
-            "SELECT name, description FROM parking_zones WHERE parking_id=$1 ORDER BY name",
+            "SELECT zone_id, name, level, description FROM parking_zones WHERE parking_id=$1 ORDER BY level, name",
             parking_id,
         )
         return [dict(row) for row in rows]
@@ -35,8 +35,9 @@ class PostgresParkingRepository:
                 )
                 for zone in data["zones"]:
                     await connection.execute(
-                        "INSERT INTO parking_zones (parking_id, name, description) VALUES ($1,$2,$3)",
-                        parking_id, zone["name"], zone.get("description"),
+                        "INSERT INTO parking_zones (parking_id, zone_id, name, level, description) "
+                        "VALUES ($1,$2,$3,$4,$5)",
+                        parking_id, zone["zone_id"], zone["name"], zone["level"], zone.get("description"),
                     )
                 return await self._get_one(connection, parking_id)
 
@@ -83,8 +84,9 @@ class PostgresParkingRepository:
                     await connection.execute("DELETE FROM parking_zones WHERE parking_id=$1", parking_uuid)
                     for zone in data["zones"]:
                         await connection.execute(
-                            "INSERT INTO parking_zones (parking_id, name, description) VALUES ($1,$2,$3)",
-                            parking_uuid, zone["name"], zone.get("description"),
+                            "INSERT INTO parking_zones (parking_id, zone_id, name, level, description) "
+                            "VALUES ($1,$2,$3,$4,$5)",
+                            parking_uuid, zone["zone_id"], zone["name"], zone["level"], zone.get("description"),
                         )
                 return await self._get_one(connection, parking_uuid)
 

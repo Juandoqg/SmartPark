@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     MONGODB_DATABASE: str = "smartpark"
     DATABASE_BACKEND: str = "mongodb"
     POSTGRES_URL: str = "postgresql://smartpark:smartpark@localhost:5432/smartpark"
+    REDIS_ENABLED: bool = True
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_AVAILABILITY_TTL_SECONDS: int = 30
 
     model_config = SettingsConfigDict(
         env_file=".env",
