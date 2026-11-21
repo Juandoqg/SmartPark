@@ -21,6 +21,13 @@ class MongoDB:
             if name not in existing:
                 await cls.database.create_collection(name)
         await cls.migrate_parking_zones()
+        await cls.database["users"].update_many(
+            {"role": {"$exists": False}}, {"$set": {"role": "user"}}
+        )
+        if settings.ADMIN_EMAIL.strip():
+            await cls.database["users"].update_one(
+                {"email": settings.ADMIN_EMAIL.strip().lower()}, {"$set": {"role": "admin"}}
+            )
         await cls.database["users"].create_index("email", unique=True, name="unique_user_email")
         vehicle_indexes = await cls.database["vehicles"].index_information()
         existing_plate_index = vehicle_indexes.get("unique_vehicle_plate")

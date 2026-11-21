@@ -1,10 +1,13 @@
 from datetime import datetime, timezone
+from starlette.concurrency import run_in_threadpool
 from pymongo.errors import DuplicateKeyError
 from app.repositories.user_repository import UserRepository
 from app.repositories.vehicle_repository import VehicleRepository
 from app.repositories.ports import RepositoryConflictError
 from app.schemas.user_schema import UserCreate, UserUpdate
 from app.services.userservice.user_service import UserService
+from app.config.settings import settings
+from app.security import hash_password
 
 
 class UserAlreadyExistsError(Exception): pass
@@ -20,6 +23,8 @@ class UserServiceImpl(UserService):
     async def create(self, user: UserCreate):
         data = user.model_dump()
         data["email"] = str(data["email"]).lower()
+        data["password_hash"] = await run_in_threadpool(hash_password, data.pop("password").get_secret_value())
+        data["role"] = "admin" if settings.ADMIN_EMAIL.strip() and data["email"] == settings.ADMIN_EMAIL.strip().lower() else "user"
         data["created_at"] = datetime.now(timezone.utc)
         try:
             return await self.user_repository.create(data)
@@ -46,6 +51,9 @@ class UserServiceImpl(UserService):
         changes = data.model_dump(exclude_unset=True)
         if "email" in changes:
             changes["email"] = str(changes["email"]).lower()
+        if "password" in changes:
+            password = changes.pop("password").get_secret_value()
+            changes["password_hash"] = await run_in_threadpool(hash_password, password)
         try:
             return await self.user_repository.update(user_id, changes)
         except (DuplicateKeyError, RepositoryConflictError) as exc:

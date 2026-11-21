@@ -7,10 +7,13 @@ from app.controllers.vehicle_controller import router as vehicle_router
 from app.controllers.parking_controller import router as parking_router
 from app.controllers.parking_space_controller import router as parking_space_router
 from app.database.redis_cache import RedisCache
+from app.controllers.auth_controller import router as auth_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if len(settings.JWT_SECRET_KEY) < 32 or settings.JWT_SECRET_KEY.startswith("replace-with-"):
+        raise RuntimeError("JWT_SECRET_KEY debe tener al menos 32 caracteres; configúrala en .env")
     backend = create_backend()
     await backend.connect()
     app.state.backend = backend
@@ -34,6 +37,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(user_router, prefix=settings.API_V1_PREFIX)
+app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 app.include_router(vehicle_router, prefix=settings.API_V1_PREFIX)
 app.include_router(parking_router, prefix=settings.API_V1_PREFIX)
 app.include_router(parking_space_router, prefix=settings.API_V1_PREFIX)

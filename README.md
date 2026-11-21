@@ -181,9 +181,26 @@ Ejemplo de solicitud:
 {
   "full_name": "Juan David Quintero",
   "email": "juan@example.com",
-  "phone": "3001234567"
+  "phone": "3001234567",
+  "password": "UnaClaveSegura123"
 }
 ```
+
+El backend exige teléfono y almacena la contraseña como hash Argon2; nunca la devuelve en respuestas. Los registros reciben rol `user`, excepto el correo configurado en `ADMIN_EMAIL`, que recibe rol `admin`.
+
+### Inicio de sesión y roles
+
+- `POST /api/v1/auth/login`: recibe `username` (el correo) y `password` como formulario `application/x-www-form-urlencoded`; responde con JWT Bearer.
+- `GET /api/v1/auth/me`: retorna el usuario autenticado y su rol.
+- Los roles disponibles son `user`, `manager` y `admin`. Un administrador puede asignar `manager` mediante `PATCH /api/v1/users/{user_id}` con `{"role":"manager"}`.
+- El helper `require_manager` autoriza `manager` y `admin` para proteger los endpoints de reportes. Los reportes deben declarar `Depends(require_manager)` cuando se implementen.
+- El registro y login son públicos. Las consultas operativas requieren token; la gestión de usuarios, vehículos, sedes y espacios requiere rol `admin`.
+
+Configura `JWT_SECRET_KEY` con un valor aleatorio de al menos 32 caracteres y define `ADMIN_EMAIL` en `.env`. Puedes generar la clave con `python -c "import secrets; print(secrets.token_hex(32))"`. Los tokens usan algoritmo HS256 y vencen según `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`.
+
+El primer administrador se crea registrando el correo definido en `ADMIN_EMAIL` (por ejemplo, `admin@gmail.com`; evita dominios reservados como `.local`). Si ese usuario ya existía antes de esta función, el arranque le asigna el rol `admin`, pero un administrador debe establecerle una contraseña en la base de datos antes del primer inicio de sesión. Para asignar el rol `manager`, inicia sesión como administrador y actualiza el usuario con `PATCH /api/v1/users/{user_id}`. Las cuentas existentes sin `password_hash` no podrán iniciar sesión hasta que se les asigne una contraseña.
+
+La contraseña no se cifra para poder recuperarla: se almacena como hash Argon2 con sal. El JWT contiene los claims `sub`, `role`, `email`, `phone`, `iat` y `exp`. La clave JWT se mantiene en `.env` y no se guarda en MongoDB ni PostgreSQL. Las cuentas antiguas sin teléfono deben ser actualizadas por un administrador antes de iniciar sesión.
 
 ### Consultar usuarios
 

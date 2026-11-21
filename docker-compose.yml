@@ -24,6 +24,9 @@ services:
       REDIS_ENABLED: ${REDIS_ENABLED:-true}
       REDIS_URL: redis://redis:6379/0
       REDIS_AVAILABILITY_TTL_SECONDS: ${REDIS_AVAILABILITY_TTL_SECONDS:-60}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Define JWT_SECRET_KEY in .env}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@gmail.com}
     depends_on:
       mongodb:
         condition: service_healthy
