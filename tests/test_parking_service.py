@@ -27,7 +27,10 @@ async def test_create_adds_timestamps_and_persists_data():
     saved = repository.create.await_args.args[0]
     assert isinstance(saved["created_at"], datetime)
     assert isinstance(saved["updated_at"], datetime)
-    assert saved["zones"] == [{"name": "Principal", "description": None}]
+    assert saved["zones"][0]["zone_id"]
+    assert saved["zones"][0]["name"] == "Principal"
+    assert saved["zones"][0]["level"] == 1
+    assert saved["zones"][0]["description"] is None
     assert result["id"] == "abc"
 
 

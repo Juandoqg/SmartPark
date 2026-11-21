@@ -62,12 +62,51 @@ class PostgresDB:
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS parking_zones (
                     parking_id UUID NOT NULL REFERENCES parkings(id) ON DELETE CASCADE,
+                    zone_id VARCHAR(50) NOT NULL,
                     name VARCHAR(50) NOT NULL,
+                    level INTEGER NOT NULL DEFAULT 1,
                     description VARCHAR(150),
                     PRIMARY KEY (parking_id, name)
                 )
             """)
+            await connection.execute("ALTER TABLE parking_zones ADD COLUMN IF NOT EXISTS zone_id VARCHAR(50)")
+            await connection.execute("ALTER TABLE parking_zones ADD COLUMN IF NOT EXISTS level INTEGER")
+            await connection.execute("UPDATE parking_zones SET zone_id=name WHERE zone_id IS NULL")
+            await connection.execute("UPDATE parking_zones SET level=1 WHERE level IS NULL")
+            await connection.execute("ALTER TABLE parking_zones ALTER COLUMN zone_id SET NOT NULL")
+            await connection.execute("ALTER TABLE parking_zones ALTER COLUMN level SET NOT NULL")
+            await connection.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS unique_zone_id_per_parking ON parking_zones(parking_id, zone_id)"
+            )
             await connection.execute("CREATE INDEX IF NOT EXISTS parkings_by_city_name ON parkings(city, name)")
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS parking_spaces (
+                    id UUID PRIMARY KEY,
+                    parking_id UUID NOT NULL REFERENCES parkings(id) ON DELETE CASCADE,
+                    zone_id VARCHAR(50) NOT NULL,
+                    zone_name VARCHAR(50) NOT NULL,
+                    space_code VARCHAR(30) NOT NULL,
+                    allowed_vehicle_types TEXT[] NOT NULL,
+                    status VARCHAR(24) NOT NULL DEFAULT 'available'
+                        CHECK (status IN ('available', 'occupied', 'reserved', 'out_of_service')),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    UNIQUE (parking_id, space_code)
+                )
+            """)
+            await connection.execute("ALTER TABLE parking_spaces ADD COLUMN IF NOT EXISTS zone_id VARCHAR(50)")
+            await connection.execute("""
+                UPDATE parking_spaces AS spaces SET zone_id=zones.zone_id
+                FROM parking_zones AS zones
+                WHERE spaces.zone_id IS NULL
+                  AND spaces.parking_id=zones.parking_id
+                  AND spaces.zone_name=zones.name
+            """)
+            await connection.execute("UPDATE parking_spaces SET zone_id=zone_name WHERE zone_id IS NULL")
+            await connection.execute("ALTER TABLE parking_spaces ALTER COLUMN zone_id SET NOT NULL")
+            await connection.execute(
+                "CREATE INDEX IF NOT EXISTS spaces_by_parking_zone_status ON parking_spaces(parking_id, zone_id, status)"
+            )
 
     @classmethod
     def get_pool(cls) -> asyncpg.Pool:

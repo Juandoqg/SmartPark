@@ -17,9 +17,10 @@ class MongoDB:
     @classmethod
     async def create_collections(cls):
         existing = await cls.database.list_collection_names()
-        for name in ("users", "vehicles", "parkings"):
+        for name in ("users", "vehicles", "parkings", "parking_spaces"):
             if name not in existing:
                 await cls.database.create_collection(name)
+        await cls.migrate_parking_zones()
         await cls.database["users"].create_index("email", unique=True, name="unique_user_email")
         vehicle_indexes = await cls.database["vehicles"].index_information()
         existing_plate_index = vehicle_indexes.get("unique_vehicle_plate")
@@ -34,6 +35,44 @@ class MongoDB:
         )
         await cls.database["vehicles"].create_index("user_id", name="vehicles_by_user")
         await cls.database["parkings"].create_index([("city", 1), ("name", 1)], name="parkings_by_city_name")
+        await cls.database["parking_spaces"].create_index(
+            [("parking_id", 1), ("space_code", 1)], unique=True, name="unique_space_code_per_parking"
+        )
+        await cls.database["parking_spaces"].create_index(
+            [("parking_id", 1), ("zone_id", 1), ("status", 1)], name="spaces_by_parking_zone_status"
+        )
+
+    @classmethod
+    async def migrate_parking_zones(cls):
+        """Give legacy embedded zones stable identifiers and levels."""
+        async for parking in cls.database["parkings"].find({"zones": {"$exists": True}}):
+            zones = parking.get("zones", [])
+            migrated = []
+            changed = False
+            for zone in zones:
+                zone = dict(zone)
+                if not zone.get("zone_id"):
+                    zone["zone_id"] = zone["name"]
+                    changed = True
+                if zone.get("level") is None:
+                    zone["level"] = 1
+                    changed = True
+                migrated.append(zone)
+            if changed:
+                await cls.database["parkings"].update_one(
+                    {"_id": parking["_id"]}, {"$set": {"zones": migrated}}
+                )
+        async for space in cls.database["parking_spaces"].find({"zone_id": {"$exists": False}}):
+            parking = await cls.database["parkings"].find_one({"_id": space["parking_id"]})
+            zone_name = space.get("zone_name", "")
+            zone = next(
+                (item for item in (parking or {}).get("zones", []) if item.get("name", "").casefold() == zone_name.casefold()),
+                None,
+            )
+            if zone:
+                await cls.database["parking_spaces"].update_one(
+                    {"_id": space["_id"]}, {"$set": {"zone_id": zone["zone_id"]}}
+                )
 
     @classmethod
     async def close(cls):

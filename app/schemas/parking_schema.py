@@ -1,5 +1,6 @@
 from datetime import datetime
 import unicodedata
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -7,8 +8,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 class ParkingZone(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
+    zone_id: str = Field(default_factory=lambda: uuid4().hex[:8], min_length=1, max_length=50)
     name: str = Field(min_length=2, max_length=50)
+    level: int = Field(default=1, ge=0, le=200)
     description: str | None = Field(default=None, max_length=150)
+
+    @field_validator("zone_id")
+    @classmethod
+    def normalize_id(cls, value: str) -> str:
+        value = value.strip()
+        if any(unicodedata.category(char).startswith("C") for char in value):
+            raise ValueError("El identificador de la zona contiene caracteres no permitidos")
+        return value
 
     @field_validator("name")
     @classmethod
@@ -63,6 +74,9 @@ class ParkingFields(BaseModel):
         normalized_names = [zone.name.casefold() for zone in zones]
         if len(normalized_names) != len(set(normalized_names)):
             raise ValueError("No puede haber zonas con nombres duplicados dentro de una sede")
+        zone_ids = [zone.zone_id.casefold() for zone in zones]
+        if len(zone_ids) != len(set(zone_ids)):
+            raise ValueError("No puede haber identificadores de zona duplicados dentro de una sede")
         return zones
 
 
@@ -119,6 +133,9 @@ class ParkingUpdate(BaseModel):
         normalized_names = [zone.name.casefold() for zone in zones]
         if len(normalized_names) != len(set(normalized_names)):
             raise ValueError("No puede haber zonas con nombres duplicados dentro de una sede")
+        zone_ids = [zone.zone_id.casefold() for zone in zones]
+        if len(zone_ids) != len(set(zone_ids)):
+            raise ValueError("No puede haber identificadores de zona duplicados dentro de una sede")
         return zones
 
 

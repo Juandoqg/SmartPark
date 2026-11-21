@@ -331,3 +331,22 @@ El siguiente recurso es `parkings`, que registra una sede y sus zonas. Las zonas
 
 Se validan el nombre, dirección, ciudad y zonas; cada sede debe tener entre 1 y 50 zonas y no se permiten nombres de zona repetidos sin distinguir mayúsculas. Los campos de creación son obligatorios y las actualizaciones parciales rechazan cuerpos vacíos, campos desconocidos y valores nulos.
 
+### Espacios y disponibilidad
+
+Los espacios se administran en la colección `parking_spaces` de MongoDB (o en la tabla equivalente de PostgreSQL). Cada espacio está asociado a una sede y zona, tiene un código único dentro de la sede, tipos de vehículo admitidos y un estado (`available`, `occupied`, `reserved` o `out_of_service`).
+
+- `POST /api/v1/parkings/{parking_id}/spaces`: crea un espacio.
+- `GET /api/v1/parkings/{parking_id}/spaces`: lista espacios; admite filtros opcionales `status` y `vehicle_type`.
+- `GET /api/v1/parkings/{parking_id}/availability`: consulta espacios disponibles y cantidad; admite `vehicle_type`.
+- `GET /api/v1/parking-spaces/{space_id}`: consulta un espacio.
+- `PATCH /api/v1/parking-spaces/{space_id}`: actualiza código, zona, tipos admitidos o estado.
+- `DELETE /api/v1/parking-spaces/{space_id}`: elimina un espacio.
+
+El `parking_id` se toma de la ruta y no se repite en el JSON. El cuerpo del espacio incluye `zone_id`, que debe existir dentro de la sede. Los tipos canónicos del sistema son `carro`, `moto` y `bicicleta`; también se aceptan `car`, `motorcycle` y `bicycle` como alias y se normalizan a esos valores.
+
+### Redis opcional
+
+Redis almacena temporalmente el resultado de disponibilidad por sede y tipo de vehículo. MongoDB o PostgreSQL siguen siendo la fuente persistente. La caché expira según `REDIS_AVAILABILITY_TTL_SECONDS` y se invalida cuando se crea, actualiza o elimina un espacio.
+
+En `.env`, configurar `REDIS_ENABLED=true` para activar la integración o `false` para ejecutar sin ella. `REDIS_URL` define la conexión. Con Docker Compose, Redis está disponible en el puerto 6379; la aplicación no usa la caché cuando la opción está desactivada.
+
