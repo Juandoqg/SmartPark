@@ -1,6 +1,7 @@
 from bson import ObjectId
 from uuid import UUID
 from app.database.mongodb import MongoDB
+from app.repositories.users.user_repository import UserRepository
 
 
 def _mongo_id(value):
@@ -12,7 +13,7 @@ def _mongo_id(value):
         raise ValueError("Identificador inválido")
 
 
-class UserRepository:
+class MongoUserRepository(UserRepository):
     @staticmethod
     def collection():
         return MongoDB.get_database()["users"]

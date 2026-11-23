@@ -1,17 +1,14 @@
 from datetime import datetime, timezone
 
-from app.repositories.parking_repository import ParkingRepository
+from app.repositories.parkings.mongo_parking_repository import MongoParkingRepository
 from app.schemas.parking_schema import ParkingCreate, ParkingUpdate
 from app.services.parkingservice.parking_service import ParkingService
-
-
-class ParkingNotFoundError(Exception):
-    pass
+from app.services.parkingservice.parking_errors import ParkingNotFoundError
 
 
 class ParkingServiceImpl(ParkingService):
     def __init__(self, parking_repository=None):
-        self.parking_repository = parking_repository or ParkingRepository()
+        self.parking_repository = parking_repository or MongoParkingRepository()
 
     async def create(self, parking: ParkingCreate):
         now = datetime.now(timezone.utc)

@@ -1,24 +1,20 @@
 from datetime import datetime, timezone
 from starlette.concurrency import run_in_threadpool
 from pymongo.errors import DuplicateKeyError
-from app.repositories.user_repository import UserRepository
-from app.repositories.vehicle_repository import VehicleRepository
+from app.repositories.users.mongo_user_repository import MongoUserRepository
+from app.repositories.vehicles.mongo_vehicle_repository import MongoVehicleRepository
 from app.repositories.ports import RepositoryConflictError
 from app.schemas.user_schema import UserCreate, UserUpdate
 from app.services.userservice.user_service import UserService
 from app.config.settings import settings
 from app.security import hash_password
-
-
-class UserAlreadyExistsError(Exception): pass
-class UserNotFoundError(Exception): pass
-class UserHasVehiclesError(Exception): pass
+from app.services.userservice.user_errors import UserAlreadyExistsError, UserHasVehiclesError, UserNotFoundError
 
 
 class UserServiceImpl(UserService):
     def __init__(self, user_repository=None, vehicle_repository=None):
-        self.user_repository = user_repository or UserRepository()
-        self.vehicle_repository = vehicle_repository or VehicleRepository()
+        self.user_repository = user_repository or MongoUserRepository()
+        self.vehicle_repository = vehicle_repository or MongoVehicleRepository()
 
     async def create(self, user: UserCreate):
         data = user.model_dump()

@@ -8,7 +8,8 @@ class MongoDB:
 
     @classmethod
     async def connect(cls):
-        cls.client = AsyncMongoClient(settings.MONGODB_URL, serverSelectionTimeoutMS=5000)
+        # BSON dates represent UTC instants; request aware datetimes when reading them.
+        cls.client = AsyncMongoClient(settings.MONGODB_URL, serverSelectionTimeoutMS=5000, tz_aware=True)
         await cls.client.admin.command("ping")
         cls.database = cls.client[settings.MONGODB_DATABASE]
         await cls.create_collections()
@@ -17,7 +18,7 @@ class MongoDB:
     @classmethod
     async def create_collections(cls):
         existing = await cls.database.list_collection_names()
-        for name in ("users", "vehicles", "parkings", "parking_spaces"):
+        for name in ("users", "vehicles", "parkings", "parking_spaces", "tariffs", "reservations", "parking_sessions"):
             if name not in existing:
                 await cls.database.create_collection(name)
         await cls.migrate_parking_zones()
@@ -47,6 +48,36 @@ class MongoDB:
         )
         await cls.database["parking_spaces"].create_index(
             [("parking_id", 1), ("zone_id", 1), ("status", 1)], name="spaces_by_parking_zone_status"
+        )
+        await cls.database["tariffs"].create_index(
+            [("parking_id", 1), ("vehicle_type", 1), ("active", 1)], name="tariffs_by_parking_vehicle_status"
+        )
+        await cls.database["reservations"].create_index(
+            [("space_id", 1), ("starts_at", 1), ("ends_at", 1), ("status", 1)],
+            name="reservations_by_space_time_status",
+        )
+        await cls.database["parking_sessions"].create_index(
+            [("space_id", 1)], unique=True, partialFilterExpression={"status": "active"},
+            name="one_active_session_per_space",
+        )
+        await cls.database["parking_sessions"].create_index(
+            [("vehicle_id", 1)], unique=True, partialFilterExpression={"status": "active"},
+            name="one_active_session_per_vehicle",
+        )
+        await cls.database["parking_sessions"].create_index(
+            [("created_by", 1), ("idempotency_key", 1)], unique=True, name="unique_session_idempotency"
+        )
+        await cls.database["parking_sessions"].create_index(
+            [("parking_id", 1), ("entry_at", -1)], name="sessions_by_parking_entry_date"
+        )
+        await cls.database["parking_sessions"].create_index(
+            [("user_id", 1), ("entry_at", -1)], name="sessions_by_user_entry_date"
+        )
+        await cls.database["reservations"].create_index(
+            [("user_id", 1), ("starts_at", -1)], name="reservations_by_user_date"
+        )
+        await cls.database["reservations"].create_index(
+            [("user_id", 1), ("idempotency_key", 1)], unique=True, name="unique_reservation_idempotency"
         )
 
     @classmethod

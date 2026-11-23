@@ -1,19 +1,17 @@
 from pymongo.errors import DuplicateKeyError
-from app.repositories.user_repository import UserRepository
-from app.repositories.vehicle_repository import VehicleRepository
+from app.repositories.users.mongo_user_repository import MongoUserRepository
+from app.repositories.vehicles.mongo_vehicle_repository import MongoVehicleRepository
 from app.repositories.ports import RepositoryConflictError
 from app.schemas.vehicle_schema import VehicleCreate, VehicleFields, VehicleUpdate
 from app.services.vehicleservice.vehicle_service import VehicleService
-
-class VehicleAlreadyExistsError(Exception): pass
-class UserNotFoundError(Exception): pass
-class VehicleNotFoundError(Exception): pass
-class VehicleValidationError(Exception): pass
+from app.services.vehicleservice.vehicle_errors import (
+    UserNotFoundError, VehicleAlreadyExistsError, VehicleNotFoundError, VehicleValidationError,
+)
 
 class VehicleServiceImpl(VehicleService):
     def __init__(self, user_repository=None, vehicle_repository=None):
-        self.user_repository = user_repository or UserRepository()
-        self.vehicle_repository = vehicle_repository or VehicleRepository()
+        self.user_repository = user_repository or MongoUserRepository()
+        self.vehicle_repository = vehicle_repository or MongoVehicleRepository()
 
     async def _ensure_user(self, user_id):
         try:

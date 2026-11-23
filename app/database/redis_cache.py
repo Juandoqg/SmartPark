@@ -42,5 +42,25 @@ class RedisCache:
         except Exception:
             logger.exception("Redis cache invalidation failed for parking %s", parking_id)
 
+    async def acquire_space_lock(self, space_id: str, operation_id: str, ttl_seconds: int) -> bool:
+        """Acquire an expiring space lock without overwriting another operation's lock."""
+        try:
+            return bool(await self.client.set(
+                f"smartpark:space-lock:{space_id}", operation_id, ex=ttl_seconds, nx=True
+            ))
+        except Exception:
+            logger.exception("Redis reservation lock failed for space %s", space_id)
+            return False
+
+    async def release_space_lock(self, space_id: str, operation_id: str):
+        """Release only the lock owned by this operation."""
+        try:
+            await self.client.eval(
+                "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+                1, f"smartpark:space-lock:{space_id}", operation_id,
+            )
+        except Exception:
+            logger.exception("Redis reservation lock release failed for space %s", space_id)
+
     async def close(self):
         await self.client.aclose()

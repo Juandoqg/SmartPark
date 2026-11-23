@@ -4,16 +4,22 @@ from app.config.settings import settings
 class MongoBackend:
     async def connect(self):
         from app.database.mongodb import MongoDB
-        from app.repositories.user_repository import UserRepository
-        from app.repositories.vehicle_repository import VehicleRepository
-        from app.repositories.parking_repository import ParkingRepository
-        from app.repositories.parking_space_repository import ParkingSpaceRepository
+        from app.repositories.users.mongo_user_repository import MongoUserRepository
+        from app.repositories.vehicles.mongo_vehicle_repository import MongoVehicleRepository
+        from app.repositories.parkings.mongo_parking_repository import MongoParkingRepository
+        from app.repositories.parking_spaces.mongo_parking_space_repository import MongoParkingSpaceRepository
+        from app.repositories.tariffs.mongo_tariff_repository import MongoTariffRepository
+        from app.repositories.reservations.mongo_reservation_repository import MongoReservationRepository
+        from app.repositories.parking_sessions.mongo_parking_session_repository import MongoParkingSessionRepository
 
         await MongoDB.connect()
-        self.user_repository = UserRepository()
-        self.vehicle_repository = VehicleRepository()
-        self.parking_repository = ParkingRepository()
-        self.parking_space_repository = ParkingSpaceRepository()
+        self.user_repository = MongoUserRepository()
+        self.vehicle_repository = MongoVehicleRepository()
+        self.parking_repository = MongoParkingRepository()
+        self.parking_space_repository = MongoParkingSpaceRepository()
+        self.tariff_repository = MongoTariffRepository()
+        self.reservation_repository = MongoReservationRepository()
+        self.parking_session_repository = MongoParkingSessionRepository()
 
     async def close(self):
         from app.database.mongodb import MongoDB
@@ -24,16 +30,22 @@ class MongoBackend:
 class PostgresBackend:
     async def connect(self):
         from app.database.postgres import PostgresDB
-        from app.repositories.postgres_user_repository import PostgresUserRepository
-        from app.repositories.postgres_vehicle_repository import PostgresVehicleRepository
-        from app.repositories.postgres_parking_repository import PostgresParkingRepository
-        from app.repositories.postgres_parking_space_repository import PostgresParkingSpaceRepository
+        from app.repositories.users.postgres_user_repository import PostgresUserRepository
+        from app.repositories.vehicles.postgres_vehicle_repository import PostgresVehicleRepository
+        from app.repositories.parkings.postgres_parking_repository import PostgresParkingRepository
+        from app.repositories.parking_spaces.postgres_parking_space_repository import PostgresParkingSpaceRepository
+        from app.repositories.tariffs.postgres_tariff_repository import PostgresTariffRepository
+        from app.repositories.reservations.postgres_reservation_repository import PostgresReservationRepository
+        from app.repositories.parking_sessions.postgres_parking_session_repository import PostgresParkingSessionRepository
 
         await PostgresDB.connect()
         self.user_repository = PostgresUserRepository()
         self.vehicle_repository = PostgresVehicleRepository()
         self.parking_repository = PostgresParkingRepository()
         self.parking_space_repository = PostgresParkingSpaceRepository()
+        self.tariff_repository = PostgresTariffRepository()
+        self.reservation_repository = PostgresReservationRepository()
+        self.parking_session_repository = PostgresParkingSessionRepository()
 
     async def close(self):
         from app.database.postgres import PostgresDB

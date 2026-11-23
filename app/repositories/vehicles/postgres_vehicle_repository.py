@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from app.database.postgres import PostgresDB, as_uuid, translate_constraint_errors
+from app.repositories.vehicles.vehicle_repository import VehicleRepository
 
 
 def _vehicle(row):
@@ -12,7 +13,7 @@ def _vehicle(row):
     return result
 
 
-class PostgresVehicleRepository:
+class PostgresVehicleRepository(VehicleRepository):
     @translate_constraint_errors
     async def create(self, data):
         async with PostgresDB.get_pool().acquire() as connection:

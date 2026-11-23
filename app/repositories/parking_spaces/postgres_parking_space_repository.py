@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from app.database.postgres import PostgresDB, as_uuid, translate_constraint_errors
+from app.repositories.parking_spaces.parking_space_repository import ParkingSpaceRepository
 
 
 def _serialize(row):
@@ -12,7 +13,7 @@ def _serialize(row):
     return result
 
 
-class PostgresParkingSpaceRepository:
+class PostgresParkingSpaceRepository(ParkingSpaceRepository):
     @translate_constraint_errors
     async def create(self, data: dict):
         async with PostgresDB.get_pool().acquire() as connection:

@@ -1,6 +1,7 @@
 from bson import ObjectId
 from uuid import UUID
 from app.database.mongodb import MongoDB
+from app.repositories.vehicles.vehicle_repository import VehicleRepository
 
 
 def _mongo_id(value):
@@ -11,7 +12,7 @@ def _mongo_id(value):
     except (ValueError, TypeError, AttributeError):
         raise ValueError("Identificador inválido")
 
-class VehicleRepository:
+class MongoVehicleRepository(VehicleRepository):
     @staticmethod
     def collection(): return MongoDB.get_database()["vehicles"]
 

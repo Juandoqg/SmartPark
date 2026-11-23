@@ -115,6 +115,73 @@ class PostgresDB:
             await connection.execute(
                 "CREATE INDEX IF NOT EXISTS spaces_by_parking_zone_status ON parking_spaces(parking_id, zone_id, status)"
             )
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS tariffs (
+                    id UUID PRIMARY KEY,
+                    parking_id UUID NOT NULL REFERENCES parkings(id) ON DELETE CASCADE,
+                    name VARCHAR(80) NOT NULL,
+                    vehicle_type VARCHAR(20) NOT NULL CHECK (vehicle_type IN ('carro','moto','bicicleta')),
+                    currency CHAR(3) NOT NULL DEFAULT 'COP',
+                    hourly_rate NUMERIC(12,2) NOT NULL CHECK (hourly_rate > 0),
+                    reservation_rate NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (reservation_rate >= 0),
+                    billing_increment_minutes INTEGER NOT NULL DEFAULT 60 CHECK (billing_increment_minutes BETWEEN 1 AND 1440),
+                    active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            await connection.execute("CREATE INDEX IF NOT EXISTS tariffs_by_parking_vehicle_status ON tariffs(parking_id, vehicle_type, active)")
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS reservations (
+                    id UUID PRIMARY KEY,
+                    parking_id UUID NOT NULL REFERENCES parkings(id) ON DELETE RESTRICT,
+                    space_id UUID NOT NULL REFERENCES parking_spaces(id) ON DELETE RESTRICT,
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+                    created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+                    vehicle_id UUID NOT NULL REFERENCES vehicles(id) ON DELETE RESTRICT,
+                    tariff_id UUID NOT NULL REFERENCES tariffs(id) ON DELETE RESTRICT,
+                    tariff_snapshot JSONB NOT NULL,
+                    estimated_total NUMERIC(12,2) NOT NULL CHECK (estimated_total >= 0),
+                    starts_at TIMESTAMPTZ NOT NULL,
+                    ends_at TIMESTAMPTZ NOT NULL CHECK (ends_at > starts_at),
+                    status VARCHAR(20) NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed','cancelled','completed')),
+                    idempotency_key VARCHAR(128) NOT NULL,
+                    request_fingerprint CHAR(64) NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    UNIQUE (created_by, idempotency_key)
+                )
+            """)
+            await connection.execute("CREATE INDEX IF NOT EXISTS reservations_by_space_time_status ON reservations(space_id, starts_at, ends_at, status)")
+            await connection.execute("CREATE INDEX IF NOT EXISTS reservations_by_user_date ON reservations(user_id, starts_at DESC)")
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS parking_sessions (
+                    id UUID PRIMARY KEY,
+                    parking_id UUID NOT NULL REFERENCES parkings(id) ON DELETE RESTRICT,
+                    space_id UUID NOT NULL REFERENCES parking_spaces(id) ON DELETE RESTRICT,
+                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+                    vehicle_id UUID NOT NULL REFERENCES vehicles(id) ON DELETE RESTRICT,
+                    tariff_id UUID NOT NULL REFERENCES tariffs(id) ON DELETE RESTRICT,
+                    tariff_snapshot JSONB NOT NULL,
+                    entry_at TIMESTAMPTZ NOT NULL,
+                    exit_at TIMESTAMPTZ,
+                    duration_minutes INTEGER CHECK (duration_minutes IS NULL OR duration_minutes >= 0),
+                    total_amount NUMERIC(12,2) CHECK (total_amount IS NULL OR total_amount >= 0),
+                    status VARCHAR(20) NOT NULL CHECK (status IN ('active','completed')),
+                    payment_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending','paid','failed')),
+                    idempotency_key VARCHAR(128) NOT NULL,
+                    request_fingerprint CHAR(64) NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    CHECK ((status='active' AND exit_at IS NULL AND total_amount IS NULL)
+                        OR (status='completed' AND exit_at IS NOT NULL AND total_amount IS NOT NULL)),
+                    UNIQUE (user_id, idempotency_key)
+                )
+            """)
+            await connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS one_active_session_per_space ON parking_sessions(space_id) WHERE status='active'")
+            await connection.execute("CREATE UNIQUE INDEX IF NOT EXISTS one_active_session_per_vehicle ON parking_sessions(vehicle_id) WHERE status='active'")
+            await connection.execute("CREATE INDEX IF NOT EXISTS sessions_by_parking_entry_date ON parking_sessions(parking_id, entry_at DESC)")
+            await connection.execute("CREATE INDEX IF NOT EXISTS sessions_by_user_entry_date ON parking_sessions(user_id, entry_at DESC)")
 
     @classmethod
     def get_pool(cls) -> asyncpg.Pool:

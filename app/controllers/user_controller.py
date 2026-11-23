@@ -1,16 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.auth import require_admin
+from app.dependencies import get_user_service
 from app.schemas.user_schema import UserCreate, UserResponse, UserUpdate
 from app.services.userservice.user_service import UserService
-from app.services.userservice.user_service_impl import (
-    UserAlreadyExistsError, UserHasVehiclesError, UserNotFoundError, UserServiceImpl,
-)
+from app.services.userservice.user_errors import UserAlreadyExistsError, UserHasVehiclesError, UserNotFoundError
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
-def get_user_service(request: Request) -> UserService:
-    backend = request.app.state.backend
-    return UserServiceImpl(backend.user_repository, backend.vehicle_repository)
 
 def _handle_error(exception):
     if isinstance(exception, UserAlreadyExistsError):

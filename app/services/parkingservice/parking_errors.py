@@ -1,0 +1,2 @@
+class ParkingNotFoundError(Exception):
+    pass

@@ -1,17 +1,15 @@
 import re
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.auth import require_admin
+from app.dependencies import get_vehicle_service
 from app.schemas.vehicle_schema import VehicleCreate, VehicleResponse, VehicleUpdate
 from app.services.vehicleservice.vehicle_service import VehicleService
-from app.services.vehicleservice.vehicle_service_impl import (
+from app.services.vehicleservice.vehicle_errors import (
     UserNotFoundError, VehicleAlreadyExistsError, VehicleNotFoundError,
-    VehicleServiceImpl, VehicleValidationError,
+    VehicleValidationError,
 )
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
-def get_vehicle_service(request: Request) -> VehicleService:
-    backend = request.app.state.backend
-    return VehicleServiceImpl(backend.user_repository, backend.vehicle_repository)
 def handle_error(exc):
     if isinstance(exc, VehicleAlreadyExistsError): raise HTTPException(409, detail=str(exc)) from exc
     if isinstance(exc, (UserNotFoundError, VehicleNotFoundError)): raise HTTPException(404, detail=str(exc)) from exc

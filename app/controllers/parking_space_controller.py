@@ -1,7 +1,8 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.auth import get_current_user, require_admin
+from app.dependencies import get_parking_space_service
 
 from app.schemas.parking_space_schema import (
     ParkingSpaceCreate,
@@ -10,24 +11,14 @@ from app.schemas.parking_space_schema import (
     normalize_vehicle_type,
 )
 from app.services.parkingspaceservice.parking_space_service import ParkingSpaceService
-from app.services.parkingspaceservice.parking_space_service_impl import (
+from app.services.parkingspaceservice.parking_space_errors import (
     ParkingNotFoundError,
     ParkingSpaceAlreadyExistsError,
     ParkingSpaceNotFoundError,
-    ParkingSpaceServiceImpl,
     ParkingSpaceValidationError,
 )
 
 router = APIRouter(tags=["Parking spaces"])
-
-
-def get_service(request: Request) -> ParkingSpaceService:
-    backend = request.app.state.backend
-    return ParkingSpaceServiceImpl(
-        backend.parking_repository,
-        backend.parking_space_repository,
-        cache=request.app.state.redis_cache,
-    )
 
 
 def _raise_http_error(exc):
@@ -47,7 +38,7 @@ def _raise_http_error(exc):
 async def create_space(
     parking_id: str,
     data: ParkingSpaceCreate,
-    service: ParkingSpaceService = Depends(get_service),
+    service: ParkingSpaceService = Depends(get_parking_space_service),
     _admin=Depends(require_admin),
 ):
     try:
@@ -63,7 +54,7 @@ async def list_spaces(
         default=None, alias="status"
     ),
     vehicle_type: Literal["carro", "moto", "bicicleta", "car", "motorcycle", "bicycle"] | None = None,
-    service: ParkingSpaceService = Depends(get_service),
+    service: ParkingSpaceService = Depends(get_parking_space_service),
     _user=Depends(get_current_user),
 ):
     try:
@@ -77,7 +68,7 @@ async def list_spaces(
 async def get_availability(
     parking_id: str,
     vehicle_type: Literal["carro", "moto", "bicicleta", "car", "motorcycle", "bicycle"] | None = None,
-    service: ParkingSpaceService = Depends(get_service),
+    service: ParkingSpaceService = Depends(get_parking_space_service),
     _user=Depends(get_current_user),
 ):
     try:
@@ -88,7 +79,7 @@ async def get_availability(
 
 
 @router.get("/parking-spaces/{space_id}", response_model=ParkingSpaceResponse)
-async def get_space(space_id: str, service: ParkingSpaceService = Depends(get_service), _user=Depends(get_current_user)):
+async def get_space(space_id: str, service: ParkingSpaceService = Depends(get_parking_space_service), _user=Depends(get_current_user)):
     try:
         return await service.find_by_id(space_id)
     except ParkingSpaceNotFoundError as exc:
@@ -99,7 +90,7 @@ async def get_space(space_id: str, service: ParkingSpaceService = Depends(get_se
 async def update_space(
     space_id: str,
     data: ParkingSpaceUpdate,
-    service: ParkingSpaceService = Depends(get_service),
+    service: ParkingSpaceService = Depends(get_parking_space_service),
     _admin=Depends(require_admin),
 ):
     try:
@@ -109,7 +100,7 @@ async def update_space(
 
 
 @router.delete("/parking-spaces/{space_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_space(space_id: str, service: ParkingSpaceService = Depends(get_service), _admin=Depends(require_admin)):
+async def delete_space(space_id: str, service: ParkingSpaceService = Depends(get_parking_space_service), _admin=Depends(require_admin)):
     try:
         await service.delete(space_id)
     except ParkingSpaceNotFoundError as exc:
