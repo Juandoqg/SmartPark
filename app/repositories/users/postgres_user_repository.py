@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from app.database.postgres import PostgresDB, as_uuid, translate_constraint_errors
+from app.repositories.users.user_repository import UserRepository
 
 
 def _user(row):
@@ -9,7 +10,7 @@ def _user(row):
     return {**dict(row), "id": str(row["id"])}
 
 
-class PostgresUserRepository:
+class PostgresUserRepository(UserRepository):
     @translate_constraint_errors
     async def create(self, data):
         user_id = uuid4()

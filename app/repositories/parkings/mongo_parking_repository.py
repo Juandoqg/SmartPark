@@ -1,5 +1,6 @@
 from bson import ObjectId
 from app.database.mongodb import MongoDB
+from app.repositories.parkings.parking_repository import ParkingRepository
 
 
 def _mongo_id(value: str):
@@ -8,7 +9,7 @@ def _mongo_id(value: str):
     return ObjectId(value)
 
 
-class ParkingRepository:
+class MongoParkingRepository(ParkingRepository):
     @staticmethod
     def collection():
         return MongoDB.get_database()["parkings"]

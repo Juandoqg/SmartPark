@@ -367,3 +367,15 @@ Redis almacena temporalmente el resultado de disponibilidad por sede y tipo de v
 
 En `.env`, configurar `REDIS_ENABLED=true` para activar la integración o `false` para ejecutar sin ella. `REDIS_URL` define la conexión. Con Docker Compose, Redis está disponible en el puerto 6379; la aplicación no usa la caché cuando la opción está desactivada.
 
+### Tarifas y reservas
+
+Las tarifas se guardan en la colección `tariffs` y se consultan por sede, tipo de vehículo y estado. Un administrador o manager puede crearlas con `POST /api/v1/parkings/{parking_id}/tariffs` (el cuerpo incluye `parking_id`, `name`, `vehicle_type`, `hourly_rate` y, opcionalmente, `currency`, `reservation_rate` y `billing_increment_minutes`). `GET` lista las tarifas; `PATCH /api/v1/parkings/{parking_id}/tariffs/{tariff_id}` actualiza precio, nombre, incremento o estado. Desactivar una tarifa conserva su historial.
+
+Un usuario autenticado crea una reserva con `POST /api/v1/reservations`, enviando `space_id`, `vehicle_id`, `tariff_id`, `starts_at`, `ends_at` (fechas ISO 8601 con zona horaria) y `idempotency_key` (única por usuario). `GET /api/v1/reservations` lista sus reservas y `POST /api/v1/reservations/{reservation_id}/cancel` cancela una reserva confirmada. El cálculo estimado suma la tarifa de reserva y el cobro por bloques configurados, redondeando cada fracción al siguiente bloque. La reserva conserva una copia de la tarifa y el estimado para que cambios futuros no alteren el precio histórico; el cobro final pertenece al flujo de salida/pago.
+
+Las sesiones representan las estancias reales, independientemente de que exista una reserva. `POST /api/v1/sessions/entry` inicia una sesión con `parking_id`, `space_id`, `vehicle_id`, `tariff_id` e `idempotency_key`. El usuario solo puede ingresar un vehículo propio; manager/admin puede registrar ingresos operativos. La API valida sede, compatibilidad y tarifa activa, guarda una copia de la tarifa, marca el espacio ocupado y evita más de una sesión activa por espacio. `GET /api/v1/sessions` lista las sesiones del usuario; manager/admin puede consultar todas, filtrando por `parking_id` y `status` (`active` o `completed`).
+
+`POST /api/v1/sessions/{session_id}/exit` cierra la sesión del usuario autenticado o permite que manager/admin registre la salida. El servidor calcula duración real en minutos y cobra bloques completos con `hourly_rate` y `billing_increment_minutes`, redondeando el importe a dos decimales. La sesión queda con `payment_status: pending`; el registro de pagos es un flujo separado. La salida libera el espacio e invalida la caché Redis de disponibilidad.
+
+MongoDB y PostgreSQL conservan los datos persistentes mediante repositorios específicos seleccionados por `DATABASE_BACKEND`. Redis conserva la caché de disponibilidad existente y adquiere un lock temporal por espacio durante la creación de una reserva; el lock tiene TTL de 15 segundos y se libera solo si pertenece a esa operación. Ambos backends garantizan una clave única de idempotencia por usuario y mantienen índices de consulta por espacio/horario y usuario/fecha.
+

@@ -6,22 +6,9 @@ from app.config.settings import settings
 from app.repositories.ports import RepositoryConflictError
 from app.schemas.parking_space_schema import ParkingSpaceCreate, ParkingSpaceUpdate
 from app.services.parkingspaceservice.parking_space_service import ParkingSpaceService
-
-
-class ParkingNotFoundError(Exception):
-    pass
-
-
-class ParkingSpaceNotFoundError(Exception):
-    pass
-
-
-class ParkingSpaceAlreadyExistsError(Exception):
-    pass
-
-
-class ParkingSpaceValidationError(Exception):
-    pass
+from app.services.parkingspaceservice.parking_space_errors import (
+    ParkingNotFoundError, ParkingSpaceAlreadyExistsError, ParkingSpaceNotFoundError, ParkingSpaceValidationError,
+)
 
 
 class ParkingSpaceServiceImpl(ParkingSpaceService):

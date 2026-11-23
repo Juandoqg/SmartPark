@@ -1,9 +1,10 @@
 from uuid import uuid4
 
 from app.database.postgres import PostgresDB, as_uuid, translate_constraint_errors
+from app.repositories.parkings.parking_repository import ParkingRepository
 
 
-class PostgresParkingRepository:
+class PostgresParkingRepository(ParkingRepository):
     @staticmethod
     async def _get_zones(connection, parking_id):
         rows = await connection.fetch(

@@ -1,16 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.auth import get_current_user, require_admin
+from app.dependencies import get_parking_service
 
 from app.schemas.parking_schema import ParkingCreate, ParkingResponse, ParkingUpdate
 from app.services.parkingservice.parking_service import ParkingService
-from app.services.parkingservice.parking_service_impl import ParkingNotFoundError, ParkingServiceImpl
+from app.services.parkingservice.parking_errors import ParkingNotFoundError
 
 
 router = APIRouter(prefix="/parkings", tags=["Parkings"])
-
-
-def get_parking_service(request: Request) -> ParkingService:
-    return ParkingServiceImpl(request.app.state.backend.parking_repository)
 
 
 @router.post("", response_model=ParkingResponse, status_code=status.HTTP_201_CREATED)
