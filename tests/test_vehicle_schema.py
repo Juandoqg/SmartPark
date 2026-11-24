@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from app.schemas.vehicle_schema import VehicleCreate
+from app.schemas.vehicle_schema import VehicleCreate, VehicleUpdate
 
 
 def test_vehicle_normalizes_plate_and_type():

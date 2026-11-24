@@ -11,6 +11,7 @@ from app.controllers.auth_controller import router as auth_router
 from app.controllers.tariff_controller import router as tariff_router
 from app.controllers.reservation_controller import router as reservation_router
 from app.controllers.parking_session_controller import router as parking_session_router
+from app.controllers.report_controller import router as report_router
 
 
 @asynccontextmanager
@@ -47,6 +48,7 @@ app.include_router(parking_space_router, prefix=settings.API_V1_PREFIX)
 app.include_router(tariff_router, prefix=settings.API_V1_PREFIX)
 app.include_router(reservation_router, prefix=settings.API_V1_PREFIX)
 app.include_router(parking_session_router, prefix=settings.API_V1_PREFIX)
+app.include_router(report_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["Health"])

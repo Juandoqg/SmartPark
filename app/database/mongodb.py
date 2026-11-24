@@ -73,6 +73,9 @@ class MongoDB:
         await cls.database["parking_sessions"].create_index(
             [("user_id", 1), ("entry_at", -1)], name="sessions_by_user_entry_date"
         )
+        await cls.database["parking_sessions"].create_index(
+            [("status", 1), ("exit_at", 1)], name="sessions_by_status_exit_date"
+        )
         await cls.database["reservations"].create_index(
             [("user_id", 1), ("starts_at", -1)], name="reservations_by_user_date"
         )
