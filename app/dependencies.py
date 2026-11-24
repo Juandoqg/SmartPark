@@ -15,6 +15,8 @@ from app.services.vehicleservice.vehicle_service import VehicleService
 from app.services.vehicleservice.vehicle_service_impl import VehicleServiceImpl
 from app.services.parkingsessionservice.parking_session_service import ParkingSessionService
 from app.services.parkingsessionservice.parking_session_service_impl import ParkingSessionServiceImpl
+from app.services.reportservice.report_service import ReportService
+from app.services.reportservice.report_service_impl import ReportServiceImpl
 
 
 def get_parking_service(request: Request) -> ParkingService:
@@ -62,3 +64,7 @@ def get_parking_session_service(request: Request) -> ParkingSessionService:
         backend.parking_session_repository,
         cache=request.app.state.redis_cache,
     )
+
+
+def get_report_service(request: Request) -> ReportService:
+    return ReportServiceImpl(request.app.state.backend.report_repository)

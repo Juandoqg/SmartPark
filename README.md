@@ -379,3 +379,11 @@ Las sesiones representan las estancias reales, independientemente de que exista 
 
 MongoDB y PostgreSQL conservan los datos persistentes mediante repositorios específicos seleccionados por `DATABASE_BACKEND`. Redis conserva la caché de disponibilidad existente y adquiere un lock temporal por espacio durante la creación de una reserva; el lock tiene TTL de 15 segundos y se libera solo si pertenece a esa operación. Ambos backends garantizan una clave única de idempotencia por usuario y mantienen índices de consulta por espacio/horario y usuario/fecha.
 
+
+### Reportes
+
+Los reportes se calculan con agregaciones de MongoDB (`$match`, `$group`, `$lookup`, `$project`, `$sort`) y requieren rol `manager` o `admin`. Solo están disponibles con `DATABASE_BACKEND=mongodb`; con PostgreSQL responden `501`.
+
+`GET /api/v1/reports/occupancy` devuelve, por sede, el total de espacios, la cantidad en cada estado (`available`, `occupied`, `reserved`, `out_of_service`) y `occupancy_rate`: el porcentaje de espacios ocupados sobre los que están en servicio. El parámetro opcional `parking_id` limita el resultado a una sede.
+
+`GET /api/v1/reports/revenue?date_from=...&date_to=...` devuelve, por sede y moneda, los ingresos (`revenue`), la cantidad de sesiones completadas y la duración promedio en minutos de las sesiones cuya salida ocurrió en el rango. `date_from` se incluye y `date_to` se excluye; ambas son fechas ISO 8601 y, si no traen zona horaria, se interpretan como UTC. `parking_id` es opcional. El índice `sessions_by_status_exit_date` respalda el filtro por estado y fecha de salida.

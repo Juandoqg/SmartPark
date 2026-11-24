@@ -11,6 +11,7 @@ class MongoBackend:
         from app.repositories.tariffs.mongo_tariff_repository import MongoTariffRepository
         from app.repositories.reservations.mongo_reservation_repository import MongoReservationRepository
         from app.repositories.parking_sessions.mongo_parking_session_repository import MongoParkingSessionRepository
+        from app.repositories.reports.mongo_report_repository import MongoReportRepository
 
         await MongoDB.connect()
         self.user_repository = MongoUserRepository()
@@ -20,6 +21,7 @@ class MongoBackend:
         self.tariff_repository = MongoTariffRepository()
         self.reservation_repository = MongoReservationRepository()
         self.parking_session_repository = MongoParkingSessionRepository()
+        self.report_repository = MongoReportRepository()
 
     async def close(self):
         from app.database.mongodb import MongoDB
@@ -46,6 +48,8 @@ class PostgresBackend:
         self.tariff_repository = PostgresTariffRepository()
         self.reservation_repository = PostgresReservationRepository()
         self.parking_session_repository = PostgresParkingSessionRepository()
+        # Reports are implemented as MongoDB aggregations only.
+        self.report_repository = None
 
     async def close(self):
         from app.database.postgres import PostgresDB
