@@ -12,17 +12,22 @@ def make_vehicle():
 
 
 @pytest.mark.asyncio
-async def test_vehicle_requires_existing_user(monkeypatch):
-    find_one = AsyncMock(return_value=None)
-    monkeypatch.setattr("app.services.vehicleservice.vehicle_service_impl.UserRepository.find_by_id", AsyncMock(return_value=None))
+async def test_vehicle_requires_existing_user():
+    user_repository = AsyncMock()
+    user_repository.find_by_id.return_value = None
+    vehicle_repository = AsyncMock()
+    service = VehicleServiceImpl(user_repository=user_repository, vehicle_repository=vehicle_repository)
     with pytest.raises(UserNotFoundError):
-        await VehicleServiceImpl().create(make_vehicle())
+        await service.create(make_vehicle())
+    vehicle_repository.create.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_duplicate_plate_becomes_domain_error(monkeypatch):
-    monkeypatch.setattr("app.services.vehicleservice.vehicle_service_impl.UserRepository.find_by_id", AsyncMock(return_value={"id": "507f1f77bcf86cd799439011"}))
-    create = AsyncMock(side_effect=DuplicateKeyError("duplicate"))
-    monkeypatch.setattr("app.services.vehicleservice.vehicle_service_impl.VehicleRepository.create", create)
+async def test_duplicate_plate_becomes_domain_error():
+    user_repository = AsyncMock()
+    user_repository.find_by_id.return_value = {"id": "507f1f77bcf86cd799439011"}
+    vehicle_repository = AsyncMock()
+    vehicle_repository.create.side_effect = DuplicateKeyError("duplicate")
+    service = VehicleServiceImpl(user_repository=user_repository, vehicle_repository=vehicle_repository)
     with pytest.raises(VehicleAlreadyExistsError):
-        await VehicleServiceImpl().create(make_vehicle())
+        await service.create(make_vehicle())
